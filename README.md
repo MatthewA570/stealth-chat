@@ -21,9 +21,22 @@ graph TD
 ## ✨ Features
 
 - **iMessage Visual Replica**:
-  - Translucent Sidebar (300px) with custom macOS backdrop-blur and styling.
-  - Sidebar contacts list representing the latest Gemini models with active macOS blue highlight.
-  - Apple system typography and message bubbles with matching tail border-radii (User = macOS Blue `#007AFF`, Gemini = light gray `#E9E9EB`).
+  - Translucent Sidebar (300px) with custom macOS backdrop-blur.
+  - Sidebar header with Settings, centralized app title, and compose button.
+  - Integrated, rounded search bar matching the macOS look.
+  - Active state contact highlight using system blue (`#007AFF`) with white text and smooth pill layout.
+- **Letter Initials Avatars**:
+  - Clean, minimalist letter avatar icons with tailored solid colors/gradients (no messy emojis or placeholder images).
+- **Bubble Geometry & Tails**:
+  - Pixel-perfect bubble corner rounding: `20px` standard rounding.
+  - Tail behavior matching macOS iMessage: the last message in a consecutive group gets a sharp tail (`rounded-br-[5px]` for sent right bubbles, `rounded-bl-[5px]` for received left bubbles).
+  - Sent bubbles use system green (`#34C759`) for SMS threads and system blue (`#007AFF`) for standard AI models.
+  - Received bubbles use dark neutral gray (`#262628`).
+- **Clean Input Bar**:
+  - Plus attachment icon on the far left.
+  - Pill-shaped input field with inner border and clean input action.
+  - Smile and AudioLines (microphone replacement) icons placed inside the input field.
+  - Dynamic send button appearing only when text is entered.
 - **Borderless & Translucent Window**:
   - Titlebar-less window rendering with native traffic lights (close, minimize, maximize buttons) preserved.
   - Integrates native macOS system vibrancy (`NSVisualEffectMaterial::Sidebar`) for a sleek, premium desktop app look.
@@ -51,6 +64,8 @@ Ensure you have Node.js and Rust installed on your machine.
    python3 -m venv venv
    source venv/bin/activate
    pip install fastapi uvicorn google-generativeai pydantic sse-starlette pyinstaller
+   
+   # Compile sidecar
    pyinstaller --onefile --name server main.py
    
    # Copy compiled sidecar to Tauri binaries folder with your target triple
