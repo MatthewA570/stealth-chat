@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+html, body {
+  background-color: transparent !important;
+}
+
 @layer base {
   body {
-    @apply m-0 p-0 font-sans antialiased text-black select-none;
+    @apply m-0 p-0 font-sans antialiased text-black dark:text-white select-none;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 }
