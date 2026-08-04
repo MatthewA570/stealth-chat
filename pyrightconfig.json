@@ -1,0 +1,9 @@
+{
+  "venvPath": "server",
+  "venv": "venv",
+  "executionEnvironments": [
+    {
+      "root": "server"
+    }
+  ]
+}

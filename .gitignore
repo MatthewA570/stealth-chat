@@ -86,7 +86,7 @@ Thumbs.db
 
 # Python virtual environment
 venv/
-.venv/
+.venv
 __pycache__/
 *.pyc
 *.pyo
@@ -103,5 +103,4 @@ src-tauri/binaries/
 server/build/
 server/dist/
 server/*.spec
-
 

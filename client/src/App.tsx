@@ -4,12 +4,15 @@ import {
   SquarePen,
   Video,
   Plus,
-  Smile,
   AudioLines,
   X,
   Key,
   Info,
   Settings,
+  PanelLeft,
+  ChevronRight,
+  CircleUserRound,
+  Send,
 } from 'lucide-react';
 
 interface Message {
@@ -18,6 +21,7 @@ interface Message {
   text: string;
   timestamp: Date;
 }
+
 
 interface Contact {
   id: string;
@@ -62,12 +66,12 @@ const CONTACTS: Contact[] = [
   },
   {
     id: 'gemini-3.1-flash-lite',
-    name: 'Gemini 3.1 Flash-Lite',
+    name: 'Gemini 3.5 Flash-Lite',
     initials: 'GL',
     avatarColor: AVATAR_COLORS[2],
     subtitle: 'Lightweight & instant replies',
     model: 'gemini-3.1-flash-lite',
-    initialMessage: 'Hello! Gemini 3.1 Flash-Lite at your service. Ask me anything for instant, snappy responses.',
+    initialMessage: 'Hello! Gemini 3.5 Flash-Lite at your service. Ask me anything for instant, snappy responses.',
   },
   {
     id: 'neighbor',
@@ -79,10 +83,10 @@ const CONTACTS: Contact[] = [
     initialMessage: 'Get off my property before I call the police',
     isSMS: true,
     initialMessages: [
-      { sender: 'ai', text: 'Get off my property before I call the police', timeOffsetMinutes: 180 },
-      { sender: 'user', text: 'Sorry', timeOffsetMinutes: 170 },
-      { sender: 'ai', text: 'Quiet', timeOffsetMinutes: 165 },
-      { sender: 'user', text: 'mb', timeOffsetMinutes: 160 },
+      { sender: 'ai', text: 'Hello neighbor', timeOffsetMinutes: 180 },
+      { sender: 'user', text: 'Hello', timeOffsetMinutes: 170 },
+      { sender: 'ai', text: 'Hello', timeOffsetMinutes: 165 },
+      { sender: 'user', text: 'Hello', timeOffsetMinutes: 160 },
     ],
   },
   {
@@ -92,12 +96,12 @@ const CONTACTS: Contact[] = [
     avatarColor: AVATAR_COLORS[4],
     subtitle: "Let me know when you're free",
     model: 'gemini-3.5-flash',
-    initialMessage: 'Are you eating enough vegetables? 🥦',
+    initialMessage: 'Hello',
     isSMS: true,
     initialMessages: [
-      { sender: 'ai', text: 'Are you eating enough vegetables? 🥦', timeOffsetMinutes: 300 },
-      { sender: 'user', text: 'Yes mom, I literally just made broccoli.', timeOffsetMinutes: 290 },
-      { sender: 'ai', text: "Good! Let me know when you're free to visit.", timeOffsetMinutes: 280 },
+      { sender: 'ai', text: 'Hello', timeOffsetMinutes: 300 },
+      { sender: 'user', text: 'Hello', timeOffsetMinutes: 290 },
+      { sender: 'ai', text: "Hello", timeOffsetMinutes: 280 },
     ],
   },
   {
@@ -157,12 +161,31 @@ function LetterAvatar({
 }) {
   return (
     <div
-      className="rounded-full flex-shrink-0 flex items-center justify-center font-semibold text-white select-none"
-      style={{ width: size, height: size, background: color, fontSize }}
+      className="contact-avatar"
+      style={{ width: size, height: size, '--avatar-color': color, fontSize } as React.CSSProperties}
     >
-      {initials}
+      <span>{initials}</span>
     </div>
   );
+}
+
+function formatMessageTimestamp(date: Date): string {
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const day = sameDay
+    ? 'Today'
+    : date.toDateString() === yesterday.toDateString()
+      ? 'Yesterday'
+      : date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  return `${day} ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+}
+
+function shouldShowTimestamp(messages: Message[], index: number): boolean {
+  if (index === 0) return true;
+  if (index < 0 || index >= messages.length) return false;
+  return messages[index].timestamp.getTime() - messages[index - 1].timestamp.getTime() > 30 * 60 * 1000;
 }
 
 // ── App ──────────────────────────────────────────────────────────────────────
@@ -171,6 +194,7 @@ function App() {
   const [selectedContact, setSelectedContact] = useState<Contact>(CONTACTS[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [input, setInput] = useState('');
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
   const [apiKey, setApiKey] = useState<string>(() => {
     return localStorage.getItem('stealth_gemini_api_key') || '';
@@ -324,302 +348,213 @@ function App() {
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const sentBubbleClass = selectedContact.isSMS
-    ? 'bg-[#34C759] text-white'
-    : 'bg-[#007AFF] text-white';
-
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-transparent text-white font-sans relative">
-
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <div
-        className="w-[300px] flex-shrink-0 flex flex-col bg-[#1C1C1C] border-r border-white/[0.06] h-full select-none"
-        data-tauri-drag-region="true"
-      >
-        {/* macOS traffic-light spacer */}
-        <div className="h-[28px] w-full flex-shrink-0" data-tauri-drag-region="true" />
-
-        {/* Header row */}
-        <div className="px-4 pt-1 pb-2 flex items-center justify-between relative" data-tauri-drag-region="true">
-          <button
-            onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}
-            className="p-1 rounded-full text-[#8E8E93] hover:bg-white/10 hover:text-white transition-colors"
-            aria-label="Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-
-          <span className="text-[17px] font-bold text-white absolute left-1/2 -translate-x-1/2 pointer-events-none">
-            Messages
-          </span>
-
-          <button
-            className="p-1 rounded-full text-[#8E8E93] hover:bg-white/10 hover:text-white transition-colors"
-            aria-label="New message"
-          >
-            <SquarePen className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="px-3 pb-3" data-tauri-drag-region="true">
-          <div className="relative flex items-center bg-[#3A3A3C] rounded-[10px] px-2.5 py-[7px]">
-            <Search className="w-3.5 h-3.5 mr-1.5 text-[#8E8E93] flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent text-[14px] focus:outline-none text-white placeholder-[#8E8E93]"
-            />
+    <main className="messages-window">
+      {isSidebarVisible && (
+        <aside className="sidebar" data-tauri-drag-region="true">
+          <div className="sidebar-toolbar" data-tauri-drag-region="true">
+            <div className="traffic-light-space" data-tauri-drag-region="true" />
+            <div className="toolbar-actions">
+              <button className="symbol-button" onClick={() => setIsSidebarVisible(false)} aria-label="Hide sidebar">
+                <PanelLeft aria-hidden="true" />
+              </button>
+              <button className="symbol-button" aria-label="New message">
+                <SquarePen aria-hidden="true" />
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Contacts List */}
-        <div className="flex-1 overflow-y-auto pb-4">
-          {filteredContacts.map((contact) => {
-            const isActive = contact.id === selectedContact.id;
-            const history = chatHistories[contact.id] || [];
-            const lastMsg = history[history.length - 1];
+          <div className="search-wrap">
+            <label className="search-field">
+              <Search aria-hidden="true" />
+              <input
+                type="search"
+                placeholder="Search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search conversations"
+              />
+            </label>
+          </div>
 
-            return (
-              <div key={contact.id} className="px-2">
+          <div className="conversation-list">
+            {filteredContacts.map((contact) => {
+              const isActive = contact.id === selectedContact.id;
+              const history = chatHistories[contact.id] || [];
+              const lastMsg = history[history.length - 1];
+              return (
                 <button
+                  key={contact.id}
+                  className={`conversation-row${isActive ? ' is-active' : ''}`}
                   onClick={() => { setSelectedContact(contact); setStreamingMessage(null); }}
-                  className={`w-full flex items-center gap-3 px-2 py-[10px] text-left transition-colors rounded-[12px] ${
-                    isActive ? 'bg-[#007AFF]' : 'hover:bg-white/[0.06]'
-                  }`}
                 >
-                  <LetterAvatar initials={contact.initials} color={contact.avatarColor} size={42} fontSize={15} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-[1px]">
-                      <span className="font-semibold text-[15px] text-white truncate leading-tight">
-                        {contact.name}
-                      </span>
-                      <span className={`text-[12px] flex-shrink-0 ml-1 ${isActive ? 'text-white/80' : 'text-[#8E8E93]'}`}>
-                        {lastMsg ? formatTimestamp(lastMsg.timestamp) : ''}
-                      </span>
-                    </div>
-                    <p className={`text-[13px] truncate leading-tight ${isActive ? 'text-white/85 font-medium' : 'text-[#8E8E93]'}`}>
-                      {lastMsg ? lastMsg.text : contact.subtitle}
-                    </p>
-                  </div>
+                  <LetterAvatar initials={contact.initials} color={contact.avatarColor} size={48} fontSize={14} />
+                  <span className="conversation-copy">
+                    <span className="conversation-heading">
+                      <strong>{contact.name}</strong>
+                      <time>{lastMsg ? formatTimestamp(lastMsg.timestamp) : ''}</time>
+                    </span>
+                    <span className="conversation-preview">{lastMsg ? lastMsg.text : contact.subtitle}</span>
+                  </span>
                 </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Chat Area ───────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col bg-[#1C1C1C] h-full relative">
-
-        {/* Floating Top Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex flex-col">
-          <div
-            className="border-b border-white/[0.08] bg-[#1C1C1C]/80 backdrop-blur-xl flex-shrink-0 select-none"
-            data-tauri-drag-region="true"
-          >
-            <div className="h-[28px]" data-tauri-drag-region="true" />
-
-            <div className="h-[52px] flex items-center justify-between px-4 relative" data-tauri-drag-region="true">
-              {/* Left: compose */}
-              <button className="p-1.5 rounded-full text-[#8E8E93] hover:bg-white/10 hover:text-white transition-colors" aria-label="New message">
-                <SquarePen className="w-5 h-5" />
-              </button>
-
-              {/* Center: avatar + name */}
-              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-[3px] pointer-events-none" data-tauri-drag-region="true">
-                <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={28} fontSize={10} />
-                <span className="font-semibold text-[12px] text-white leading-none flex items-center gap-0.5">
-                  {selectedContact.name}
-                  {selectedContact.isSMS && <span className="text-[#8E8E93] font-normal text-[11px]">›</span>}
-                </span>
-              </div>
-
-              {/* Right: video */}
-              <button className="p-1.5 rounded-full text-[#8E8E93] hover:bg-white/10 hover:text-white transition-colors" aria-label="Video call">
-                <Video className="w-5 h-5" />
-              </button>
-            </div>
+              );
+            })}
+            {filteredContacts.length === 0 && <div className="empty-search">No conversations found</div>}
           </div>
 
-          {/* API Key Missing Banner */}
-          {!apiKey && (
-            <div className="bg-amber-950/20 border-b border-amber-900/30 px-4 py-2 text-xs flex items-center justify-between text-amber-300 backdrop-blur-md">
-              <span className="flex items-center gap-1.5">
-                <Info className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                API Key is missing. Live chat is disabled until you provide your Gemini API key.
-              </span>
-              <button onClick={() => setIsSettingsOpen(true)} className="font-semibold underline hover:text-amber-100">
-                Enter API Key
+          <button
+            className="sidebar-settings"
+            onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}
+            aria-label="Open settings"
+          >
+            <Settings aria-hidden="true" />
+            <span>Settings</span>
+          </button>
+        </aside>
+      )}
+
+      <section className="chat-pane">
+        <header className="chat-header" data-tauri-drag-region="true">
+          <div className="header-leading">
+            {!isSidebarVisible && (
+              <button className="symbol-button" onClick={() => setIsSidebarVisible(true)} aria-label="Show sidebar">
+                <PanelLeft aria-hidden="true" />
               </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+          <button className="contact-header" aria-label={`Conversation details for ${selectedContact.name}`}>
+            <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={42} fontSize={12} />
+            <span>{selectedContact.name}</span>
+            <ChevronRight aria-hidden="true" />
+          </button>
+          <div className="header-actions">
+            <button className="symbol-button video-button" aria-label="Start video call">
+              <Video aria-hidden="true" />
+            </button>
+            <button
+              className="symbol-button"
+              onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}
+              aria-label="Conversation settings"
+            >
+              <CircleUserRound aria-hidden="true" />
+            </button>
+          </div>
+        </header>
 
-        {/* Messages scroll area */}
-        <div
-          className="flex-1 overflow-y-auto px-4 space-y-[3px] pb-[80px]"
-          style={{ paddingTop: apiKey ? '108px' : '144px' }}
-        >
-          {activeMessages.map((msg, idx) => {
-            const isUser = msg.sender === 'user';
-            const nextMsg = activeMessages[idx + 1];
-            const isLastInGroup = !nextMsg || nextMsg.sender !== msg.sender;
+        {!apiKey && (
+          <div className="api-notice" role="status">
+            <Info aria-hidden="true" />
+            <span>Connect your Gemini API key to send messages.</span>
+            <button onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}>Set Up</button>
+          </div>
+        )}
 
-            return (
-              <div
-                key={msg.id}
-                className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} ${isLastInGroup ? 'mb-1' : ''}`}
-              >
-                {/* Received: avatar slot */}
-                {!isUser && (
-                  <div className="w-[28px] flex-shrink-0 self-end mr-1.5">
-                    {isLastInGroup && (
-                      <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={24} fontSize={9} />
+        <div className="message-scroll">
+          <div className="message-stack">
+            {activeMessages.map((msg, idx) => {
+              const isUser = msg.sender === 'user';
+              const nextMsg = activeMessages[idx + 1];
+              const previousMsg = activeMessages[idx - 1];
+              const isLastInGroup = !nextMsg || nextMsg.sender !== msg.sender || shouldShowTimestamp(activeMessages, idx + 1);
+              const isFirstInGroup = !previousMsg || previousMsg.sender !== msg.sender || shouldShowTimestamp(activeMessages, idx);
+              return (
+                <React.Fragment key={msg.id}>
+                  {shouldShowTimestamp(activeMessages, idx) && (
+                    <time className="message-timestamp">{formatMessageTimestamp(msg.timestamp)}</time>
+                  )}
+                  <div className={`message-row ${isUser ? 'sent' : 'received'}${isFirstInGroup ? ' group-start' : ''}`}>
+                    {!isUser && (
+                      <span className="message-avatar-slot">
+                        {isLastInGroup && <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={24} fontSize={8} />}
+                      </span>
                     )}
+                    <div className={`message-bubble${isLastInGroup ? ' has-tail' : ''}${selectedContact.isSMS && isUser ? ' sms' : ''}`}>
+                      {msg.text}
+                    </div>
                   </div>
-                )}
+                </React.Fragment>
+              );
+            })}
 
-                <div
-                  className={`relative max-w-[70%] px-[14px] py-[9px] text-[15px] leading-snug ${
-                    isUser
-                      ? `${sentBubbleClass} rounded-t-[20px] rounded-bl-[20px] ${isLastInGroup ? 'rounded-br-[5px]' : 'rounded-br-[20px]'}`
-                      : `bg-[#262628] text-white rounded-t-[20px] rounded-br-[20px] ${isLastInGroup ? 'rounded-bl-[5px]' : 'rounded-bl-[20px]'}`
-                  }`}
-                >
-                  {msg.text}
+            {streamingMessage !== null && (
+              <div className="message-row received group-start">
+                <span className="message-avatar-slot">
+                  <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={24} fontSize={8} />
+                </span>
+                <div className="message-bubble has-tail">
+                  {streamingMessage || (
+                    <span className="typing-indicator" aria-label="Typing">
+                      <i /><i /><i />
+                    </span>
+                  )}
                 </div>
               </div>
-            );
-          })}
-
-          {/* Streaming bubble */}
-          {streamingMessage !== null && (
-            <div className="flex w-full justify-start mb-1">
-              <div className="w-[28px] flex-shrink-0 self-end mr-1.5">
-                <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={24} fontSize={9} />
-              </div>
-              <div className="relative max-w-[70%] px-[14px] py-[9px] text-[15px] leading-snug bg-[#262628] text-white rounded-t-[20px] rounded-br-[20px] rounded-bl-[5px]">
-                {streamingMessage}
-                {streamingMessage === '' && (
-                  <span className="flex gap-1 items-center justify-center h-5 w-8">
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
-        {/* ── Input Bar ──────────────────────────────────────────────────────── */}
-        <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5 bg-[#1C1C1C] border-t border-white/[0.08]">
-          <form onSubmit={handleSend} className="flex items-center gap-2">
-            {/* Plus button */}
-            <button
-              type="button"
-              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[#8E8E93] hover:bg-white/10 hover:text-white transition-colors"
-              aria-label="Add attachment"
-            >
-              <Plus className="w-5 h-5" />
+        <footer className="composer-bar">
+          <form onSubmit={handleSend} className="composer-form">
+            <button type="button" className="round-action" aria-label="Add attachment">
+              <Plus aria-hidden="true" />
             </button>
-
-            {/* Pill input */}
-            <div className="flex-1 relative flex items-center bg-[#2C2C2E] border border-[#3A3A3C] rounded-full px-4 py-[7px]">
+            <div className="composer-field">
               <input
                 type="text"
-                placeholder={apiKey ? (selectedContact.isSMS ? 'Text Message' : 'iMessage') : 'Enter API key to chat...'}
+                placeholder={apiKey ? (selectedContact.isSMS ? 'Text Message • SMS' : 'iMessage') : 'Connect API key to chat'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isLoading}
-                className="flex-1 bg-transparent text-[15px] focus:outline-none text-white placeholder-[#8E8E93] min-w-0"
+                aria-label="Message"
               />
-              <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                <button type="button" className="text-[#8E8E93] hover:text-white transition-colors" aria-label="Emoji">
-                  <Smile className="w-[18px] h-[18px]" />
+              {input.trim() ? (
+                <button type="submit" className="send-button" disabled={isLoading} aria-label="Send message">
+                  <Send aria-hidden="true" />
                 </button>
-                <button type="button" className="text-[#8E8E93] hover:text-white transition-colors" aria-label="Audio">
-                  <AudioLines className="w-[18px] h-[18px]" />
+              ) : (
+                <button type="button" className="audio-button" aria-label="Send audio message">
+                  <AudioLines aria-hidden="true" />
                 </button>
-              </div>
+              )}
             </div>
-
-            {/* Send button - appears only when text is present */}
-            {input.trim() && (
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[#007AFF] text-white hover:bg-[#0A78EF] transition-all"
-                aria-label="Send"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </button>
-            )}
           </form>
-        </div>
-      </div>
+        </footer>
+      </section>
 
-      {/* ── Settings Modal ──────────────────────────────────────────────────── */}
       {isSettingsOpen && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50">
-          <div className="w-[420px] bg-[#2C2C2E]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl flex flex-col overflow-hidden text-white text-sm select-none">
-            <div className="h-10 border-b border-white/10 flex items-center justify-between px-4">
-              <span className="font-semibold flex items-center gap-1.5 text-white">
-                <Key className="w-4 h-4 text-gray-400" />
-                API Configuration
-              </span>
-              <button onClick={() => setIsSettingsOpen(false)} className="p-0.5 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveKey} className="p-5 flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                  Google AI Studio API Key
-                </label>
-                <input
-                  type="password"
-                  placeholder="AIzaSy..."
-                  value={tempKey}
-                  onChange={(e) => setTempKey(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-[#0B84FF] text-white shadow-inner"
-                />
+        <div className="modal-backdrop" role="presentation" onMouseDown={(e) => {
+          if (e.currentTarget === e.target) setIsSettingsOpen(false);
+        }}>
+          <section className="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <header>
+              <span id="settings-title"><Key aria-hidden="true" /> API Configuration</span>
+              <button onClick={() => setIsSettingsOpen(false)} aria-label="Close settings"><X aria-hidden="true" /></button>
+            </header>
+            <form onSubmit={handleSaveKey}>
+              <label htmlFor="api-key">Google AI Studio API Key</label>
+              <input
+                id="api-key"
+                type="password"
+                placeholder="AIzaSy..."
+                value={tempKey}
+                onChange={(e) => setTempKey(e.target.value)}
+                autoFocus
+              />
+              <div className="privacy-note">
+                <Key aria-hidden="true" />
+                <p>Your key stays in this app's local storage and is only sent to the local chat service for Gemini authentication.</p>
               </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-1.5 leading-relaxed">
-                <p>
-                  <strong>🔒 Highly Secure & Local:</strong> Your API key is saved directly inside your computer's local application sandbox storage. It never leaves your machine except to authenticate requests directly sent to Google.
-                </p>
-                <p>
-                  Get your free Gemini API key with generous limits from{' '}
-                  <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-[#0B84FF] hover:underline font-medium">
-                    Google AI Studio
-                  </a>.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-white/10">
-                <button type="button" onClick={() => setIsSettingsOpen(false)} className="px-4 py-1.5 rounded-md text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white active:bg-white/15">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-1.5 rounded-md text-xs font-semibold text-white bg-[#007AFF] hover:bg-blue-600 transition-colors active:bg-blue-700 shadow-sm">
-                  Save Configuration
-                </button>
+              <p className="key-help">Create a key in <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">Google AI Studio</a>.</p>
+              <div className="modal-actions">
+                <button type="button" onClick={() => setIsSettingsOpen(false)}>Cancel</button>
+                <button type="submit" className="primary-button">Save</button>
               </div>
             </form>
-          </div>
+          </section>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 
