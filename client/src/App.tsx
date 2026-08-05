@@ -169,6 +169,23 @@ function LetterAvatar({
   );
 }
 
+function ContactHeader({ contact }: { contact: Contact }) {
+  return (
+    <button className="contact-header" aria-label={`Conversation details for ${contact.name}`}>
+      <span className="contact-header-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="presentation">
+          <circle cx="12" cy="7.6" r="4.15" />
+          <path d="M3.8 21c.45-5.15 3.55-8.05 8.2-8.05s7.75 2.9 8.2 8.05H3.8Z" />
+        </svg>
+      </span>
+      <span className="contact-header-badge">
+        <strong>{contact.name}</strong>
+        <ChevronRight aria-hidden="true" />
+      </span>
+    </button>
+  );
+}
+
 function formatMessageTimestamp(date: Date): string {
   const today = new Date();
   const sameDay = date.toDateString() === today.toDateString();
@@ -422,11 +439,7 @@ function App() {
               </button>
             )}
           </div>
-          <button className="contact-header" aria-label={`Conversation details for ${selectedContact.name}`}>
-            <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={42} fontSize={12} />
-            <span>{selectedContact.name}</span>
-            <ChevronRight aria-hidden="true" />
-          </button>
+          <ContactHeader contact={selectedContact} />
           <div className="header-actions">
             <button className="symbol-button video-button" aria-label="Start video call">
               <Video aria-hidden="true" />
