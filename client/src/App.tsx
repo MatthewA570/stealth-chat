@@ -1,18 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Search,
-  SquarePen,
-  Video,
-  Plus,
-  AudioLines,
   X,
   Key,
-  Info,
-  Settings,
   PanelLeft,
-  ChevronRight,
-  CircleUserRound,
-  Send,
 } from 'lucide-react';
 
 interface Message {
@@ -27,7 +17,6 @@ interface Contact {
   id: string;
   name: string;
   initials: string;
-  avatarColor: string;
   subtitle: string;
   model: string;
   initialMessage: string;
@@ -35,22 +24,31 @@ interface Contact {
   initialMessages?: { sender: 'user' | 'ai'; text: string; timeOffsetMinutes: number }[];
 }
 
-// ── Avatar colour palette ────────────────────────────────────────────────────
-const AVATAR_COLORS: string[] = [
-  '#5E5CE6', // indigo-purple (Gemini Flash)
-  '#0A84FF', // system blue  (Gemini Pro)
-  '#30D158', // system green (Flash-Lite)
-  '#FF9F0A', // orange       (Neighbor)
-  '#FF375F', // red-pink     (Mom)
-  '#636366', // neutral gray (Delivery)
-];
+type AppleSymbolName =
+  | 'arrow.up'
+  | 'chevron.right'
+  | 'face.smiling'
+  | 'line.3.horizontal.decrease'
+  | 'magnifyingglass'
+  | 'plus'
+  | 'square.and.pencil'
+  | 'waveform';
+
+function AppleSymbol({ name }: { name: AppleSymbolName }) {
+  return (
+    <span
+      className="apple-symbol"
+      style={{ '--symbol-image': `url("/sf-symbols/${name}.png")` } as React.CSSProperties}
+      aria-hidden="true"
+    />
+  );
+}
 
 const CONTACTS: Contact[] = [
   {
     id: 'gemini-3.5-flash',
     name: 'Gemini 3.5 Flash',
     initials: 'GF',
-    avatarColor: AVATAR_COLORS[0],
     subtitle: 'Cost-efficient & high speed',
     model: 'gemini-3.5-flash',
     initialMessage: 'I am Gemini 3.5 Flash. Optimized for fast replies, low latency, and highly efficient processing. How can I help you?',
@@ -59,7 +57,6 @@ const CONTACTS: Contact[] = [
     id: 'gemini-3.1-pro',
     name: 'Gemini 3.1 Pro',
     initials: 'GP',
-    avatarColor: AVATAR_COLORS[1],
     subtitle: 'Deep reasoning & analysis',
     model: 'gemini-3.1-pro',
     initialMessage: 'Greetings. I am Gemini 3.1 Pro, our flagship model for deep analysis, complex coding, and multi-step reasoning. What shall we analyze today?',
@@ -68,7 +65,6 @@ const CONTACTS: Contact[] = [
     id: 'gemini-3.1-flash-lite',
     name: 'Gemini 3.5 Flash-Lite',
     initials: 'GL',
-    avatarColor: AVATAR_COLORS[2],
     subtitle: 'Lightweight & instant replies',
     model: 'gemini-3.1-flash-lite',
     initialMessage: 'Hello! Gemini 3.5 Flash-Lite at your service. Ask me anything for instant, snappy responses.',
@@ -77,7 +73,6 @@ const CONTACTS: Contact[] = [
     id: 'neighbor',
     name: 'Neighbor',
     initials: 'N',
-    avatarColor: AVATAR_COLORS[3],
     subtitle: "All good, he's just chilling",
     model: 'gemini-3.5-flash',
     initialMessage: 'Get off my property before I call the police',
@@ -93,7 +88,6 @@ const CONTACTS: Contact[] = [
     id: 'mom',
     name: 'Mom',
     initials: 'M',
-    avatarColor: AVATAR_COLORS[4],
     subtitle: "Let me know when you're free",
     model: 'gemini-3.5-flash',
     initialMessage: 'Hello',
@@ -107,8 +101,7 @@ const CONTACTS: Contact[] = [
   {
     id: 'delivery',
     name: 'Apple Delivery',
-    initials: 'AD',
-    avatarColor: AVATAR_COLORS[5],
+    initials: 'D',
     subtitle: 'Delivered! Your package is at...',
     model: 'gemini-3.5-flash',
     initialMessage: 'Your order #98213 has been shipped.',
@@ -148,42 +141,62 @@ function formatTimestamp(date: Date): string {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-function LetterAvatar({
-  initials,
-  color,
+function ProfileAvatar({
+  contact,
   size = 42,
   fontSize = 15,
 }: {
-  initials: string;
-  color: string;
+  contact: Pick<Contact, 'initials' | 'isSMS'>;
   size?: number;
   fontSize?: number;
 }) {
+  const showsInitial = Boolean(contact.isSMS);
+
   return (
     <div
-      className="contact-avatar"
-      style={{ width: size, height: size, '--avatar-color': color, fontSize } as React.CSSProperties}
+      className={`profile-avatar${showsInitial ? ' uses-initial' : ''}`}
+      style={{ width: size, height: size, fontSize }}
+      aria-hidden="true"
     >
-      <span>{initials}</span>
-    </div>
-  );
-}
-
-function ContactHeader({ contact }: { contact: Contact }) {
-  return (
-    <button className="contact-header" aria-label={`Conversation details for ${contact.name}`}>
-      <span className="contact-header-avatar" aria-hidden="true">
+      {showsInitial ? (
+        <strong>{contact.initials}</strong>
+      ) : (
         <svg viewBox="0 0 24 24" role="presentation">
           <circle cx="12" cy="7.6" r="4.15" />
           <path d="M3.8 21c.45-5.15 3.55-8.05 8.2-8.05s7.75 2.9 8.2 8.05H3.8Z" />
         </svg>
-      </span>
+      )}
+    </div>
+  );
+}
+
+function ContactHeader({ contact, timestamp }: { contact: Contact; timestamp?: Date }) {
+  return (
+    <button className="contact-header" aria-label={`Conversation details for ${contact.name}`}>
+      <ProfileAvatar contact={contact} size={42} fontSize={19} />
       <span className="contact-header-badge">
         <strong>{contact.name}</strong>
-        <ChevronRight aria-hidden="true" />
+        <AppleSymbol name="chevron.right" />
+      </span>
+      <span className="contact-header-meta">
+        <strong>{contact.isSMS ? 'Text Message • SMS' : 'iMessage'}</strong>
+        {timestamp && <time>{formatHeaderTimestamp(timestamp)}</time>}
       </span>
     </button>
   );
+}
+
+function formatHeaderTimestamp(date: Date): string {
+  const day = date.toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const time = date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `${day} at ${time}`;
 }
 
 function formatMessageTimestamp(date: Date): string {
@@ -371,19 +384,14 @@ function App() {
         <aside className="sidebar" data-tauri-drag-region="true">
           <div className="sidebar-toolbar" data-tauri-drag-region="true">
             <div className="traffic-light-space" data-tauri-drag-region="true" />
-            <div className="toolbar-actions">
-              <button className="symbol-button" onClick={() => setIsSidebarVisible(false)} aria-label="Hide sidebar">
-                <PanelLeft aria-hidden="true" />
-              </button>
-              <button className="symbol-button" aria-label="New message">
-                <SquarePen aria-hidden="true" />
-              </button>
-            </div>
+            <button className="sidebar-list-button" onClick={() => setIsSidebarVisible(false)} aria-label="Hide sidebar">
+              <AppleSymbol name="line.3.horizontal.decrease" />
+            </button>
           </div>
 
           <div className="search-wrap">
             <label className="search-field">
-              <Search aria-hidden="true" />
+              <AppleSymbol name="magnifyingglass" />
               <input
                 type="search"
                 placeholder="Search"
@@ -405,7 +413,7 @@ function App() {
                   className={`conversation-row${isActive ? ' is-active' : ''}`}
                   onClick={() => { setSelectedContact(contact); setStreamingMessage(null); }}
                 >
-                  <LetterAvatar initials={contact.initials} color={contact.avatarColor} size={48} fontSize={14} />
+                  <ProfileAvatar contact={contact} size={40} fontSize={18} />
                   <span className="conversation-copy">
                     <span className="conversation-heading">
                       <strong>{contact.name}</strong>
@@ -419,14 +427,6 @@ function App() {
             {filteredContacts.length === 0 && <div className="empty-search">No conversations found</div>}
           </div>
 
-          <button
-            className="sidebar-settings"
-            onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}
-            aria-label="Open settings"
-          >
-            <Settings aria-hidden="true" />
-            <span>Settings</span>
-          </button>
         </aside>
       )}
 
@@ -438,29 +438,12 @@ function App() {
                 <PanelLeft aria-hidden="true" />
               </button>
             )}
-          </div>
-          <ContactHeader contact={selectedContact} />
-          <div className="header-actions">
-            <button className="symbol-button video-button" aria-label="Start video call">
-              <Video aria-hidden="true" />
-            </button>
-            <button
-              className="symbol-button"
-              onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}
-              aria-label="Conversation settings"
-            >
-              <CircleUserRound aria-hidden="true" />
+            <button className="header-compose-button" aria-label="New message">
+              <AppleSymbol name="square.and.pencil" />
             </button>
           </div>
+          <ContactHeader contact={selectedContact} timestamp={activeMessages[0]?.timestamp} />
         </header>
-
-        {!apiKey && (
-          <div className="api-notice" role="status">
-            <Info aria-hidden="true" />
-            <span>Connect your Gemini API key to send messages.</span>
-            <button onClick={() => { setTempKey(apiKey); setIsSettingsOpen(true); }}>Set Up</button>
-          </div>
-        )}
 
         <div className="message-scroll">
           <div className="message-stack">
@@ -472,15 +455,10 @@ function App() {
               const isFirstInGroup = !previousMsg || previousMsg.sender !== msg.sender || shouldShowTimestamp(activeMessages, idx);
               return (
                 <React.Fragment key={msg.id}>
-                  {shouldShowTimestamp(activeMessages, idx) && (
+                  {idx > 0 && shouldShowTimestamp(activeMessages, idx) && (
                     <time className="message-timestamp">{formatMessageTimestamp(msg.timestamp)}</time>
                   )}
                   <div className={`message-row ${isUser ? 'sent' : 'received'}${isFirstInGroup ? ' group-start' : ''}`}>
-                    {!isUser && (
-                      <span className="message-avatar-slot">
-                        {isLastInGroup && <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={24} fontSize={8} />}
-                      </span>
-                    )}
                     <div className={`message-bubble${isLastInGroup ? ' has-tail' : ''}${selectedContact.isSMS && isUser ? ' sms' : ''}`}>
                       {msg.text}
                     </div>
@@ -491,9 +469,6 @@ function App() {
 
             {streamingMessage !== null && (
               <div className="message-row received group-start">
-                <span className="message-avatar-slot">
-                  <LetterAvatar initials={selectedContact.initials} color={selectedContact.avatarColor} size={24} fontSize={8} />
-                </span>
                 <div className="message-bubble has-tail">
                   {streamingMessage || (
                     <span className="typing-indicator" aria-label="Typing">
@@ -510,12 +485,12 @@ function App() {
         <footer className="composer-bar">
           <form onSubmit={handleSend} className="composer-form">
             <button type="button" className="round-action" aria-label="Add attachment">
-              <Plus aria-hidden="true" />
+              <AppleSymbol name="plus" />
             </button>
             <div className="composer-field">
               <input
                 type="text"
-                placeholder={apiKey ? (selectedContact.isSMS ? 'Text Message • SMS' : 'iMessage') : 'Connect API key to chat'}
+                placeholder={selectedContact.isSMS ? 'Text Message • SMS' : 'iMessage'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isLoading}
@@ -523,14 +498,17 @@ function App() {
               />
               {input.trim() ? (
                 <button type="submit" className="send-button" disabled={isLoading} aria-label="Send message">
-                  <Send aria-hidden="true" />
+                  <AppleSymbol name="arrow.up" />
                 </button>
               ) : (
                 <button type="button" className="audio-button" aria-label="Send audio message">
-                  <AudioLines aria-hidden="true" />
+                  <AppleSymbol name="waveform" />
                 </button>
               )}
             </div>
+            <button type="button" className="emoji-button" aria-label="Choose emoji">
+              <AppleSymbol name="face.smiling" />
+            </button>
           </form>
         </footer>
       </section>
