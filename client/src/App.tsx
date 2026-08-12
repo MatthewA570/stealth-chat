@@ -18,8 +18,10 @@ interface Contact {
   name: string;
   initials: string;
   subtitle: string;
-  model: string;
+  model?: string;
   initialMessage: string;
+  canPrompt?: boolean;
+  avatarImage?: string;
   isSMS?: boolean;
   initialMessages?: { sender: 'user' | 'ai'; text: string; timeOffsetMinutes: number }[];
 }
@@ -51,6 +53,7 @@ const CONTACTS: Contact[] = [
     initials: 'GF',
     subtitle: 'Cost-efficient & high speed',
     model: 'gemini-3.5-flash',
+    canPrompt: true,
     initialMessage: 'I am Gemini 3.5 Flash. Optimized for fast replies, low latency, and highly efficient processing. How can I help you?',
   },
   {
@@ -59,6 +62,7 @@ const CONTACTS: Contact[] = [
     initials: 'GP',
     subtitle: 'Deep reasoning & analysis',
     model: 'gemini-3.1-pro',
+    canPrompt: true,
     initialMessage: 'Greetings. I am Gemini 3.1 Pro, our flagship model for deep analysis, complex coding, and multi-step reasoning. What shall we analyze today?',
   },
   {
@@ -67,6 +71,7 @@ const CONTACTS: Contact[] = [
     initials: 'GL',
     subtitle: 'Lightweight & instant replies',
     model: 'gemini-3.1-flash-lite',
+    canPrompt: true,
     initialMessage: 'Hello! Gemini 3.5 Flash-Lite at your service. Ask me anything for instant, snappy responses.',
   },
   {
@@ -74,7 +79,6 @@ const CONTACTS: Contact[] = [
     name: 'Neighbor',
     initials: 'N',
     subtitle: "All good, he's just chilling",
-    model: 'gemini-3.5-flash',
     initialMessage: 'Get off my property before I call the police',
     isSMS: true,
     initialMessages: [
@@ -89,7 +93,6 @@ const CONTACTS: Contact[] = [
     name: 'Mom',
     initials: 'M',
     subtitle: "Let me know when you're free",
-    model: 'gemini-3.5-flash',
     initialMessage: 'Hello',
     isSMS: true,
     initialMessages: [
@@ -99,11 +102,62 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 'jenny-anderson',
+    name: 'Jenny Anderson',
+    initials: 'J',
+    subtitle: 'Are we still on for coffee tomorrow?',
+    avatarImage: '/contact-photos/jenny-anderson.jpg',
+    initialMessage: 'Are we still on for coffee tomorrow?',
+    isSMS: true,
+    initialMessages: [
+      { sender: 'user', text: 'Coffee tomorrow morning?', timeOffsetMinutes: 1480 },
+      { sender: 'ai', text: 'Absolutely! Same place around 10?', timeOffsetMinutes: 1455 },
+    ],
+  },
+  {
+    id: 'michael-clarke',
+    name: 'Michael Clarke',
+    initials: 'M',
+    subtitle: 'The meeting moved to 2:30.',
+    avatarImage: '/contact-photos/michael-clarke.jpg',
+    initialMessage: 'The meeting moved to 2:30.',
+    isSMS: true,
+    initialMessages: [
+      { sender: 'ai', text: 'Quick heads-up—the meeting moved to 2:30.', timeOffsetMinutes: 3020 },
+      { sender: 'user', text: 'Thanks, I’ll update my calendar.', timeOffsetMinutes: 2990 },
+    ],
+  },
+  {
+    id: 'amy-clarke',
+    name: 'Amy Clarke',
+    initials: 'A',
+    subtitle: 'I sent the photos from Saturday!',
+    avatarImage: '/contact-photos/amy-clarke.jpg',
+    initialMessage: 'I sent the photos from Saturday!',
+    isSMS: true,
+    initialMessages: [
+      { sender: 'ai', text: 'I sent the photos from Saturday! There are some really good ones.', timeOffsetMinutes: 6240 },
+      { sender: 'user', text: 'Just saw them—these are great!', timeOffsetMinutes: 6200 },
+    ],
+  },
+  {
+    id: 'kevin-miller',
+    name: 'Kevin Miller',
+    initials: 'K',
+    subtitle: 'See you at the game tonight.',
+    avatarImage: '/contact-photos/kevin-miller.jpg',
+    initialMessage: 'See you at the game tonight.',
+    isSMS: true,
+    initialMessages: [
+      { sender: 'user', text: 'What time are you heading over?', timeOffsetMinutes: 9080 },
+      { sender: 'ai', text: 'Probably around 6. See you at the game tonight.', timeOffsetMinutes: 9040 },
+    ],
+  },
+  {
     id: 'delivery',
     name: 'Apple Delivery',
     initials: 'D',
     subtitle: 'Delivered! Your package is at...',
-    model: 'gemini-3.5-flash',
     initialMessage: 'Your order #98213 has been shipped.',
     isSMS: true,
     initialMessages: [
@@ -146,7 +200,7 @@ function ProfileAvatar({
   size = 42,
   fontSize = 15,
 }: {
-  contact: Pick<Contact, 'initials' | 'isSMS'>;
+  contact: Pick<Contact, 'initials' | 'isSMS' | 'avatarImage'>;
   size?: number;
   fontSize?: number;
 }) {
@@ -158,7 +212,9 @@ function ProfileAvatar({
       style={{ width: size, height: size, fontSize }}
       aria-hidden="true"
     >
-      {showsInitial ? (
+      {contact.avatarImage ? (
+        <img src={contact.avatarImage} alt="" />
+      ) : showsInitial ? (
         <strong>{contact.initials}</strong>
       ) : (
         <svg viewBox="0 0 24 24" role="presentation">
@@ -274,10 +330,11 @@ function App() {
   }, []);
 
   const activeMessages = chatHistories[selectedContact.id] || [];
+  const canPromptSelected = Boolean(selectedContact.canPrompt && selectedContact.model);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!canPromptSelected || !input.trim() || isLoading) return;
 
     if (!apiKey.trim()) {
       setIsSettingsOpen(true);
@@ -301,10 +358,6 @@ function App() {
     }));
 
     try {
-      const messageText = selectedContact.isSMS
-        ? `[SYSTEM INSTRUCTION: You are roleplaying as "${selectedContact.name}" in a casual SMS chat. Keep your response very brief (1-2 sentences max), informal, and in-character. Do not reveal you are an AI model.] User message: ${userText}`
-        : userText;
-
       const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: {
@@ -312,7 +365,7 @@ function App() {
           'X-Gemini-API-Key': apiKey.trim(),
         },
         body: JSON.stringify({
-          message: messageText,
+          message: userText,
           model: selectedContact.model,
           history: (chatHistories[selectedContact.id] || []).map((m) => ({
             role: m.sender === 'user' ? 'user' : 'assistant',
@@ -411,7 +464,11 @@ function App() {
                 <button
                   key={contact.id}
                   className={`conversation-row${isActive ? ' is-active' : ''}`}
-                  onClick={() => { setSelectedContact(contact); setStreamingMessage(null); }}
+                  onClick={() => {
+                    setSelectedContact(contact);
+                    setInput('');
+                    setStreamingMessage(null);
+                  }}
                 >
                   <ProfileAvatar contact={contact} size={40} fontSize={18} />
                   <span className="conversation-copy">
@@ -483,30 +540,30 @@ function App() {
         </div>
 
         <footer className="composer-bar">
-          <form onSubmit={handleSend} className="composer-form">
-            <button type="button" className="round-action" aria-label="Add attachment">
+          <form onSubmit={handleSend} className={`composer-form${canPromptSelected ? '' : ' is-read-only'}`}>
+            <button type="button" className="round-action" disabled={!canPromptSelected} aria-label="Add attachment">
               <AppleSymbol name="plus" />
             </button>
             <div className="composer-field">
               <input
                 type="text"
-                placeholder={selectedContact.isSMS ? 'Text Message • SMS' : 'iMessage'}
+                placeholder={canPromptSelected ? 'iMessage' : 'Conversation is read-only'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                disabled={isLoading}
-                aria-label="Message"
+                disabled={!canPromptSelected || isLoading}
+                aria-label={canPromptSelected ? 'Message' : 'Read-only conversation'}
               />
-              {input.trim() ? (
+              {canPromptSelected && input.trim() ? (
                 <button type="submit" className="send-button" disabled={isLoading} aria-label="Send message">
                   <AppleSymbol name="arrow.up" />
                 </button>
               ) : (
-                <button type="button" className="audio-button" aria-label="Send audio message">
+                <button type="button" className="audio-button" disabled={!canPromptSelected} aria-label="Send audio message">
                   <AppleSymbol name="waveform" />
                 </button>
               )}
             </div>
-            <button type="button" className="emoji-button" aria-label="Choose emoji">
+            <button type="button" className="emoji-button" disabled={!canPromptSelected} aria-label="Choose emoji">
               <AppleSymbol name="face.smiling" />
             </button>
           </form>

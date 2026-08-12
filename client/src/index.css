@@ -188,7 +188,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   box-shadow: inset 0 0 0 .5px rgba(255,255,255,.18), 0 .5px 1px rgba(0,0,0,.3);
 }
 .profile-avatar svg { width: 72%; height: 72%; fill: currentColor; }
-.profile-avatar strong { color: #fff; font-size: 1em; font-weight: 500; letter-spacing: -.04em; line-height: 1; }
+.profile-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.profile-avatar strong { color: #fff; font-size: 1em; font-weight: 700; letter-spacing: -.04em; line-height: 1; }
 
 .conversation-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
 .conversation-heading { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 7px; }
@@ -344,6 +345,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   -webkit-backdrop-filter: saturate(170%) blur(28px);
 }
 .composer-form { display: flex; align-items: center; gap: 8px; }
+.composer-form.is-read-only .composer-field { opacity: .72; }
+.composer-form.is-read-only button { cursor: default; opacity: .38; }
 .round-action {
   display: grid;
   width: 31px;
@@ -370,6 +373,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .composer-field:focus-within { border-color: #5b5b5f; }
 .composer-field input { flex: 1; min-width: 0; padding: 0; color: var(--label); background: transparent; border: 0; outline: 0; font-size: 14px; letter-spacing: -.1px; }
+.composer-field input:disabled { cursor: default; }
 .composer-field input::placeholder { color: #6f6f74; opacity: 1; }
 .audio-button, .send-button {
   display: grid;
