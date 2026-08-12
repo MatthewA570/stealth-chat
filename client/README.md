@@ -1,32 +1,27 @@
-# React + TypeScript + Vite
+# Stealth Chat frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This directory contains the React and TypeScript interface for Stealth Chat. It runs in Vite during development and is compiled into static assets for the Tauri desktop shell.
 
-Currently, two official plugins are available:
+For complete setup and packaging instructions, start with the [project README](../README.md). Architecture and request-flow details are documented in [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Commands
 
-## React Compiler
+Run these from the repository root:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci --prefix client
+npm run dev --prefix client
+npm run build --prefix client
+npm run lint --prefix client
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`dev` starts the frontend at `http://localhost:5173`. It does not start the FastAPI sidecar, so chat requests will fail unless the local service is also running on port 8000. Use `npm run dev` at the repository root for the complete desktop application.
+
+## Source map
+
+- `src/App.tsx` contains the current application state, conversation fixtures, settings dialog, and streaming request logic.
+- `src/index.css` defines the Messages-inspired layout, theme, and component styling.
+- `public/sf-symbols/` contains rasterized interface symbols.
+- `public/contact-photos/` contains sample contact images and their attribution notes.
+
+The frontend has no router or external state store. Chat history is held in React state for the current session, while the Gemini API key is stored in the WebView's `localStorage` under `stealth_gemini_api_key`.
